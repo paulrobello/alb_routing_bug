@@ -21,7 +21,7 @@ all: clean stack-init build deploy
 
 # output set of vars that all tf commands should use
 make-tf-vars:
-	rm $(IAC_DIR)/*.auto.tfvars -f
+	#rm $(IAC_DIR)/*.auto.tfvars -f
 	echo 'lambda_subnet_ids=$(VPC_SUBNET_IDS)' > $(IAC_DIR)/$(STACK_SUFFIX).auto.tfvars
 	echo 'lambda_security_group_ids=$(VPC_SG_IDS)' >> $(IAC_DIR)/$(STACK_SUFFIX).auto.tfvars
 	echo 'vpc_id="$(VPC_ID)"' >> $(IAC_DIR)/$(STACK_SUFFIX).auto.tfvars
@@ -57,7 +57,17 @@ delete-zips:
 it-again: destroy clean all
 
 #--------- [ API ] ------------
-exec-api-all: exec-api-route-1 exec-api-route-2 exec-api-route-not-found
+exec-api-all: exec-api-health exec-api-route-1 exec-api-route-2 exec-api-route-not-found
+
+exec-api-health:
+	@API_KEY=$$(jq -r '.api_key_value.value' outputs.json); \
+	INVOKE_URL=$$(jq -r '.alb_invoke_url.value' outputs.json); \
+	RES=$$(curl -sk -X GET \
+	-H "Content-Type: application/json" \
+	-H "X-API-KEY: $$API_KEY" \
+	-k "$$INVOKE_URL/health"); \
+	echo "Expected: \"HEALTHY\"          Got: $$RES"
+
 
 exec-api-route-1:
 	@API_KEY=$$(jq -r '.api_key_value.value' outputs.json); \

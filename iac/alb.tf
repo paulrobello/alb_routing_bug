@@ -47,6 +47,44 @@ resource "aws_lb_listener" "alb_listener" {
   }
 }
 
+
+resource "aws_lb_listener_rule" "health_check" {
+  listener_arn = aws_lb_listener.alb_listener.arn
+
+  action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "HEALTHY"
+      status_code  = "200"
+    }
+  }
+
+#  condition {
+#    query_string {
+#      key   = "health"
+#      value = "check"
+#    }
+##    query_string {
+##      value = "bar"
+##    }
+#  }
+
+  condition {
+    path_pattern {
+      values = ["/${var.stage_name}/health"]
+    }
+  }
+  condition {
+    http_header {
+      http_header_name = "x-api-key"
+      values           = [random_string.api_key.result]
+    }
+  }
+}
+
+
 #------- 404 for default route --------
 
 resource "aws_lb_target_group" "default_tg" {
